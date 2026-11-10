@@ -79,8 +79,7 @@
     "vitest": "^5.1.0"
   },
   "lint-staged": {
-    "*.{js,cjs,mjs,ts,mts,cts,vue,yml}": "eslint --fix",
-    "*": "cspell --no-summary --no-progress"
+    "*.*": "eslint --fix"
   },
   "config": {
     "commitizen": {
