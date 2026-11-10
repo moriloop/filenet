@@ -2,9 +2,13 @@ antfu
 backpressure
 changelogen
 Chunker
+chunkers
 citty
 commitlint
 consola
+datagram
+datagrams
+dgram
 ECONNRESET
 esbuild
 filenet
@@ -14,9 +18,11 @@ typecheck
 cli
 chunksize
 netcat
+rinfo
 mori
 tutamail
 tsc
+udp
 ESM
 toolchain
 moriloop

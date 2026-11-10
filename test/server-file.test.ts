@@ -70,7 +70,7 @@ let servers: Server[]
 async function serve(content: Buffer, options: { chunksize?: number, delay?: number } = {}) {
   const file = join(dir, 'served.bin')
   await writeFile(file, content)
-  const server = serveFile(0, '127.0.0.1', file, { chunksize: 1024, delay: 0, ...options })
+  const server = serveFile(0, '127.0.0.1', file, { chunksize: 1024, delay: 0, ...options }) as Server
   servers.push(server)
   const { port } = await listen(server)
   return { file, port, server }

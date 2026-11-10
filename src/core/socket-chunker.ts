@@ -1,5 +1,5 @@
 import type { Socket } from 'node:net'
-import { readChunk } from 'read-chunk'
+import { readFileChunk } from './chunk-reader.js'
 import { getSocketName } from './util.js'
 
 export class SocketChunker {
@@ -29,7 +29,7 @@ export class SocketChunker {
 
   async nextChunk() {
     try {
-      const buffer = await readChunk(this.file, { length: this.chunkSize, startPosition: this._position })
+      const { buffer, done } = await readFileChunk(this.file, this._position, this.chunkSize)
 
       if (this.socketIsClosed)
         return
@@ -40,7 +40,7 @@ export class SocketChunker {
 
         this.progress && this.progress(this._position)
 
-        if (!buffer || buffer.byteLength < this.chunkSize) {
+        if (done) {
           // end of file reached
           this.socket.end()
           this.socket.destroy()

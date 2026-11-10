@@ -1,19 +1,43 @@
-import type { Socket } from 'node:net'
+import type { Socket as DatagramSocket, RemoteInfo } from 'node:dgram'
+import type { Server, Socket } from 'node:net'
+import { createSocket } from 'node:dgram'
 import fs from 'node:fs'
 import { createServer } from 'node:net'
 import consola from 'consola'
+import { DatagramChunker } from './datagram-chunker.js'
 import { ProgressBars } from './progress-bars.js'
 import { SocketChunker } from './socket-chunker.js'
-import { errorMessage, getSocketName, humanFileSize } from './util.js'
+import { errorMessage, getPeerName, getSocketName, humanFileSize } from './util.js'
 
-// const rl = readline.createInterface({
-//   input: process.stdin,
-//   output: process.stdout,
-// })
+const TCP_DEFAULT_CHUNK_SIZE = 1024 * 1024
+const TCP_DEFAULT_DELAY = 1000
+const UDP_DEFAULT_CHUNK_SIZE = 1400
+const UDP_DEFAULT_DELAY = 0
+/** Largest IPv4 UDP payload: 65535 - 20 (IP header) - 8 (UDP header). */
+const UDP_MAX_PAYLOAD = 65_507
 
-export function serveFile(serverPort: number, serverHost: string, fileToServe: string, params?: { chunksize?: number, delay?: number }) {
-  const chunkSize = params?.chunksize ?? 1 * 1024 * 1024
-  const delay = params?.delay ?? 1000
+export type ServeProtocol = 'tcp' | 'udp'
+
+export interface ServeFileParams {
+  chunksize?: number
+  delay?: number
+  /** Transport to serve on. Defaults to `tcp`. */
+  protocol?: ServeProtocol
+}
+
+/** `net.Server` for TCP, `dgram.Socket` for UDP. */
+export type FileServer = Server | DatagramSocket
+
+export function serveFile(serverPort: number, serverHost: string, fileToServe: string, params?: ServeFileParams): FileServer {
+  const protocol = params?.protocol ?? 'tcp'
+  return protocol === 'udp'
+    ? serveFileUdp(serverPort, serverHost, fileToServe, params)
+    : serveFileTcp(serverPort, serverHost, fileToServe, params)
+}
+
+function serveFileTcp(serverPort: number, serverHost: string, fileToServe: string, params?: ServeFileParams): Server {
+  const chunkSize = params?.chunksize ?? TCP_DEFAULT_CHUNK_SIZE
+  const delay = params?.delay ?? TCP_DEFAULT_DELAY
 
   const port = serverPort ?? 7070
   const host = serverHost ?? '127.0.0.1'
@@ -92,4 +116,91 @@ export function serveFile(serverPort: number, serverHost: string, fileToServe: s
     })
   })
   return server
+}
+
+function serveFileUdp(serverPort: number, serverHost: string, fileToServe: string, params?: ServeFileParams): DatagramSocket {
+  const chunkSize = params?.chunksize ?? UDP_DEFAULT_CHUNK_SIZE
+  const delay = params?.delay ?? UDP_DEFAULT_DELAY
+
+  if (!Number.isInteger(chunkSize) || chunkSize <= 0)
+    throw new RangeError(`UDP chunk size must be a positive integer, got ${chunkSize}`)
+  if (chunkSize > UDP_MAX_PAYLOAD)
+    throw new RangeError(`UDP chunk size must not exceed ${UDP_MAX_PAYLOAD} bytes, got ${chunkSize}`)
+
+  const port = serverPort ?? 7070
+  const host = serverHost ?? '127.0.0.1'
+  const file = fileToServe ?? '/tmp/file'
+
+  const fileStat = fs.statSync(file)
+  const fileSize = fileStat.size
+
+  const socket = createSocket({
+    type: host.includes(':')
+      ? 'udp6'
+      : 'udp4',
+  })
+  const progressBars = new ProgressBars()
+  const activePeers = new Set<string>()
+
+  socket.on('listening', () => {
+    const address = socket.address()
+    consola.start(`UDP File Server is running on ${address.address}:${address.port}`)
+    consola.start(`Chunk Size: ${humanFileSize(chunkSize)} | Delay (between each chunk): ${delay} ms`)
+    consola.success(`File: ${file} | Size: ${humanFileSize(fileSize)} \n`)
+    consola.info('Best-effort mode: send any datagram to start a stream. UDP can lose or reorder packets, so the received file is not guaranteed to be intact.')
+  })
+
+  // Any datagram from a new peer starts one transfer to that peer. Datagrams
+  // from a peer that is already receiving are ignored.
+  socket.on('message', (_message, peer) => {
+    const clientName = getPeerName(peer)
+    if (activePeers.has(clientName))
+      return
+    activePeers.add(clientName)
+
+    progressBars.add(clientName, Math.ceil(fileSize / chunkSize))
+
+    const chunker = new DatagramChunker({
+      file,
+      chunkSize,
+      delay,
+      send: buffer => sendDatagram(socket, peer, buffer),
+      progress: position => progressBars.increment(clientName, {
+        humanSize: humanFileSize(position),
+        status: 'Working',
+      }),
+      onComplete: () => {
+        activePeers.delete(clientName)
+        progressBars.update(clientName, { status: 'Done' })
+        progressBars.log(`DONE: ${clientName}`)
+      },
+      onError: (error) => {
+        activePeers.delete(clientName)
+        progressBars.update(clientName, { status: 'Error' })
+        progressBars.log(`ERROR: ${clientName} | ${errorMessage(error)}`)
+      },
+    })
+    chunker.start()
+  })
+
+  // A datagram sent to a port nobody listens on can come back as ICMP port
+  // unreachable, which Node reports as ECONNREFUSED on the bound socket. Keep
+  // the server alive and report it.
+  socket.on('error', (error) => {
+    progressBars.log(`ERROR: server | ${errorMessage(error)}`)
+  })
+
+  socket.bind(port, host)
+  return socket
+}
+
+function sendDatagram(socket: DatagramSocket, peer: RemoteInfo, buffer: Uint8Array) {
+  return new Promise<void>((resolve, reject) => {
+    socket.send(buffer, peer.port, peer.address, (error) => {
+      if (error)
+        reject(error)
+      else
+        resolve()
+    })
+  })
 }

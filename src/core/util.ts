@@ -1,3 +1,4 @@
+import type { RemoteInfo } from 'node:dgram'
 import type { Socket } from 'node:net'
 
 export function humanFileSize(size: number) {
@@ -20,6 +21,10 @@ export function humanFileSizeToBytes(fileSizeString: string) {
 
 export function getSocketName(sock: Socket) {
   return `${sock.remoteAddress}:${sock.remotePort}`
+}
+
+export function getPeerName(peer: RemoteInfo) {
+  return `${peer.address}:${peer.port}`
 }
 
 /** One line description of a value caught in a `catch` block. */

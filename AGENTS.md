@@ -4,10 +4,11 @@ Guidance for AI coding agents working in this repository.
 
 ## What this project is
 
-`filenet` is a small TypeScript utility that serves a single file over raw TCP,
-in chunks, to multiple clients at once. It ships as both a CLI
-(`filenet serve <file>`) and a library (`serveFile(...)`). There is no HTTP and
-no protocol framing: clients connect with `nc` and stream the bytes out.
+`filenet` is a small TypeScript utility that serves a single file over raw TCP
+(by default) or UDP, in chunks, to multiple clients at once. It ships as both a
+CLI (`filenet serve <file>`) and a library (`serveFile(...)`). There is no HTTP
+and no protocol framing: TCP clients connect with `nc` and stream the bytes out.
+UDP is best-effort: one chunk per datagram, no EOF marker, no retransmission.
 
 ## Commands
 
@@ -42,10 +43,13 @@ pnpm exec cspell --no-summary --no-progress <files>
 - `src/index.ts`: public library entry point. Keep the public surface here.
 - `src/cli.ts`: citty root command. Subcommands are registered here.
 - `src/commands/serve.ts`: the `serve` command and its argument parsing.
-- `src/core/server-file.ts`: TCP server, connection lifecycle, wiring between
-  `SocketChunker` instances and progress bars.
+- `src/core/server-file.ts`: TCP/UDP dispatch, listener lifecycle, wiring
+  between chunkers and progress bars.
 - `src/core/socket-chunker.ts`: per-socket read/write loop, chunk delay, EOF
   and closed-socket handling.
+- `src/core/datagram-chunker.ts`: per-peer UDP send loop, chunk delay, and
+  error handling.
+- `src/core/chunk-reader.ts`: shared single-chunk read and EOF detection.
 - `src/core/progress-bars.ts`: `cli-progress` `MultiBar` wrapper, one bar per
   connected client.
 - `src/core/util.ts`: size formatting/parsing and socket naming.
@@ -65,8 +69,19 @@ pnpm exec cspell --no-summary --no-progress <files>
   file per chunk has to keep that property.
 - `serveFile` returns the `net.Server` but does not manage its lifecycle. There
   is no SIGINT handling, and the CLI currently ignores the returned server.
+- UDP uses one bound `dgram.Socket` for every peer. Any datagram from a new
+  `rinfo` starts a `DatagramChunker` for that address and port; datagrams from a
+  peer that is already receiving are ignored.
+- UDP is lossy by design: one chunk per datagram, no EOF datagram, no
+  retransmission, and no ordering guarantee. A short or empty read ends the
+  transfer. An empty final read, which happens when the file size is an exact
+  multiple of the chunk size, is not sent.
+- UDP chunk size must be a positive integer no larger than 65507 bytes. The
+  library and CLI default to 1400 bytes with a 0 ms delay.
+- The CLI binds UDP to `127.0.0.1` unless `--host` is given, to avoid turning an
+  accidental public listener into a reflection amplifier.
 - Per-client progress totals are `ceil(fileSize / chunkSize)` chunks, keyed by
-  `remoteAddress:remotePort`.
+  `remoteAddress:remotePort` for TCP and `address:port` from `rinfo` for UDP.
 - `chunkSize` and `delay` have different defaults in the CLI (1M, 500 ms) and in
   the library (1 MiB, 1000 ms). If you change one, decide whether the other
   should follow.
@@ -77,8 +92,10 @@ pnpm exec cspell --no-summary --no-progress <files>
 - Capture the client name when the connection opens. `remoteAddress` and
   `remotePort` are gone once the socket is destroyed, so the `'close'` handler
   must not re-read them.
-- Do not introduce framing, headers, or handshakes into the stream.
-  `nc host port > file` compatibility is the core promise.
+- Do not introduce framing, headers, or handshakes into the TCP stream.
+  `nc host port > file` compatibility is the core promise. UDP cannot offer that
+  promise: datagrams are independent messages and the receiver must know how
+  many to expect.
 
 ## Coding conventions
 
@@ -110,9 +127,17 @@ pnpm exec cspell --no-summary --no-progress <files>
   fake `EventEmitter` socket, so chunk boundaries, EOF, the delay and the
   closed-socket guard can be asserted without a real connection. Copy that
   fake when you need to test socket behavior.
-- `test/server-file.test.ts` is the integration test. It serves a temp file on
-  port `0`, reads it back over a real TCP socket, and mocks `cli-progress` and
-  `consola` to keep the output clean. Prefer this style for end-to-end checks.
+- `test/datagram-chunker.test.ts` drives the UDP loop with a fake `send`
+  callback: chunk boundaries, the skipped empty final chunk, delay, stop, send
+  failures, and read failures.
+- `test/server-file-udp.test.ts` is the UDP integration test. It serves a temp
+  file on port `0`, sends a trigger datagram from a real `dgram` client, and
+  counts datagrams because UDP has no EOF. Mocks `cli-progress` and `consola`
+  the same way as the TCP integration test.
+- `test/server-file.test.ts` is the TCP integration test. It serves a temp file
+  on port `0`, reads it back over a real TCP socket, and mocks `cli-progress`
+  and `consola` to keep the output clean. Prefer this style for end-to-end
+  checks.
 - `test/serve-command.test.ts` covers CLI argument parsing with `serveFile`
   mocked. Keep its expectations in sync with the README option table.
 - `test/index.test.ts` checks that the package entry point exports `serveFile`.
@@ -147,6 +172,10 @@ pnpm exec cspell --no-summary --no-progress <files>
 - `humanFileSize(0)` returns `NaN undefined` because `Math.log(0)` is
   `-Infinity`. Serving an empty file prints that in the banner. Untested on
   purpose; fix the formatter if you touch it.
+- UDP has no close event. A peer that disappears simply stops receiving; the
+  server keeps sending until the file ends. There is nothing to clean up.
+- `serveFile` returns `net.Server` for TCP and `dgram.Socket` for UDP. Callers
+  that hold the result need to handle both types.
 - A file whose size is an exact multiple of `chunkSize` costs one extra read
   that returns an empty buffer, and that empty chunk still reports progress.
   `test/socket-chunker.test.ts` pins this behavior.

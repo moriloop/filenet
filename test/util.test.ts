@@ -1,6 +1,7 @@
+import type { RemoteInfo } from 'node:dgram'
 import type { Socket } from 'node:net'
 import { describe, expect, it } from 'vitest'
-import { errorMessage, getSocketName, humanFileSize, humanFileSizeToBytes } from '../src/core/util'
+import { errorMessage, getPeerName, getSocketName, humanFileSize, humanFileSizeToBytes } from '../src/core/util'
 
 describe('humanFileSize', () => {
   it('formats sizes below 1 KiB as bytes', () => {
@@ -51,6 +52,13 @@ describe('getSocketName', () => {
   it('joins the remote address and port', () => {
     const socket = { remoteAddress: '127.0.0.1', remotePort: 51714 } as unknown as Socket
     expect(getSocketName(socket)).toBe('127.0.0.1:51714')
+  })
+})
+
+describe('getPeerName', () => {
+  it('joins the peer address and port', () => {
+    const peer = { address: '127.0.0.1', port: 51714 } as unknown as RemoteInfo
+    expect(getPeerName(peer)).toBe('127.0.0.1:51714')
   })
 })
 
