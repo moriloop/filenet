@@ -5,6 +5,7 @@ citty
 commitlint
 consola
 ECONNRESET
+esbuild
 filenet
 KMGT
 RST
