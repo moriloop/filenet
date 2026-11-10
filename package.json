@@ -3,15 +3,17 @@
   "type": "module",
   "version": "0.1.3",
   "packageManager": "pnpm@latest",
-  "description": "files on network",
+  "description": "Serve a single file over raw TCP in chunks to many clients at once",
   "author": "mgh <m.ghoreshi@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/mohammadGh/filenet.git",
+  "homepage": "https://github.com/moriloop/filenet#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mohammadGh/filenet.git"
+    "url": "git+https://github.com/moriloop/filenet.git"
   },
-  "bugs": "https://github.com/mohammadGh/filenet/issues",
+  "bugs": {
+    "url": "https://github.com/moriloop/filenet/issues"
+  },
   "keywords": [
     "network",
     "network utility",
