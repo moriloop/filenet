@@ -8,6 +8,10 @@
     "release": true,
     "releaseName": "Release v${version}"
   },
+  "npm": {
+    "release": true,
+    "releaseName": "Release v${version}"
+  },
   "hooks": {
     "before:init": ["git pull", "pnpm lint"]
   },
