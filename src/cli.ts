@@ -1,18 +1,24 @@
 #!/usr/bin/env node
+import { createRequire } from 'node:module'
 import { defineCommand, runMain } from 'citty'
+
+const { version, description } = createRequire(import.meta.url)('../package.json') as {
+  version: string
+  description: string
+}
 
 const main = defineCommand({
   meta: {
     name: 'filenet',
-    version: '0.0.1',
-    description: 'Citty playground CLI',
+    version,
+    description,
   },
   setup() {
   },
   cleanup() {
   },
   subCommands: {
-    serve: () => import('./commands/serve').then(r => r.default),
+    serve: () => import('./commands/serve.js').then(r => r.default),
   },
 })
 

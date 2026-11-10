@@ -1,1 +1,1 @@
-export * from './core/server-file'
+export * from './core/server-file.js'

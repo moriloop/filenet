@@ -17,8 +17,8 @@ Run everything from the repository root. Use pnpm; the lockfile and
 | Command | Purpose |
 | --- | --- |
 | `pnpm install` | Install dependencies |
-| `pnpm dev` | unbuild stub build for development |
-| `pnpm build` | Production build into `dist/` (ESM + CJS + `.d.ts`) |
+| `pnpm dev` | TypeScript watch build for development |
+| `pnpm build` | Production build into `dist/` (ESM + `.d.ts`) |
 | `pnpm start` | Build, then run the CLI from `dist/` |
 | `pnpm test` | One-shot test run |
 | `pnpm test:watch` | Vitest watch mode |
@@ -82,7 +82,9 @@ pnpm exec cspell --no-summary --no-progress <files>
 
 ## Coding conventions
 
-- TypeScript strict mode, ESM first, bundler module resolution.
+- TypeScript strict mode, ESM first, bundler module resolution for typecheck.
+- Source relative imports use explicit `.js` extensions: the build is plain
+  `tsc` with `NodeNext` resolution and the package is ESM only.
 - Style comes from `@antfu/eslint-config`: single quotes, no semicolons,
   2-space indentation, sorted imports. Do not add Prettier. Format through
   ESLint.

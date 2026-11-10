@@ -2,9 +2,9 @@ import { createServer } from 'node:net'
 import type { Socket } from 'node:net'
 import fs from 'node:fs'
 import consola from 'consola'
-import { ProgressBars } from './progress-bars'
-import { errorMessage, getSocketName, humanFileSize } from './util'
-import { SocketChunker } from './socket-chunker'
+import { ProgressBars } from './progress-bars.js'
+import { errorMessage, getSocketName, humanFileSize } from './util.js'
+import { SocketChunker } from './socket-chunker.js'
 
 // const rl = readline.createInterface({
 //   input: process.stdin,

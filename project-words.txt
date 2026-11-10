@@ -16,3 +16,6 @@ chunksize
 netcat
 mori
 tutamail
+tsc
+ESM
+toolchain

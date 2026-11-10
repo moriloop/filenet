@@ -1,7 +1,7 @@
 import consola from 'consola'
 import { defineCommand } from 'citty'
-import { serveFile } from '..'
-import { humanFileSizeToBytes } from '../core/util'
+import { serveFile } from '../core/server-file.js'
+import { humanFileSizeToBytes } from '../core/util.js'
 
 export default defineCommand({
   meta: {

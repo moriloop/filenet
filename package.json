@@ -24,31 +24,21 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     }
   },
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "./dist/*",
-        "./dist/index.d.ts"
-      ]
-    }
-  },
   "bin": {
-    "filenet": "./dist/cli.mjs"
+    "filenet": "./dist/cli.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "start": "unbuild && node dist/cli.mjs",
-    "build": "unbuild",
-    "dev": "unbuild --stub",
+    "start": "pnpm build && node dist/cli.js",
+    "build": "node scripts/clean.mjs && tsc -p tsconfig.build.json",
+    "dev": "node scripts/clean.mjs && tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "lint": "eslint .",
     "prepublishOnly": "pnpm build",
     "test": "vitest run",
@@ -83,7 +73,6 @@
     "release-it": "^17.2.0",
     "release-it-beautiful-changelog": "^0.1.1",
     "typescript": "^5.4.5",
-    "unbuild": "^2.0.0",
     "vitest": "^1.5.0"
   },
   "lint-staged": {

@@ -1,6 +1,6 @@
 import type { Socket } from 'node:net'
 import { readChunk } from 'read-chunk'
-import { getSocketName } from './util'
+import { getSocketName } from './util.js'
 
 export class SocketChunker {
   file: string

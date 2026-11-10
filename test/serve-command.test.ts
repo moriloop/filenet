@@ -3,7 +3,7 @@ import serveCommand from '../src/commands/serve'
 
 const { serveFileMock } = vi.hoisted(() => ({ serveFileMock: vi.fn() }))
 
-vi.mock('../src', () => ({ serveFile: serveFileMock }))
+vi.mock('../src/core/server-file', () => ({ serveFile: serveFileMock }))
 
 /** citty hands the parsed args to `run`; the rest of the context is unused here. */
 function run(args: Record<string, string>) {
