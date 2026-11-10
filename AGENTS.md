@@ -116,8 +116,8 @@ pnpm exec cspell --no-summary --no-progress <files>
 - `test/serve-command.test.ts` covers CLI argument parsing with `serveFile`
   mocked. Keep its expectations in sync with the README option table.
 - `test/index.test.ts` checks that the package entry point exports `serveFile`.
-- CI (`.github/workflows/build-typecheck-test.yml`) runs lint, typecheck, and
-  tests on pushes and pull requests to `main`.
+- CI (`.github/workflows/build-typecheck-test.yml`) runs lint, typecheck,
+  tests, and the build on pushes and pull requests to `main`.
 - Do not bind fixed ports in tests without cleanup. Prefer port `0` or close
   the server in `afterEach`.
 
