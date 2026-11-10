@@ -1,8 +1,8 @@
 import type { AddressInfo, Server } from 'node:net'
 import { Buffer } from 'node:buffer'
 import { once } from 'node:events'
-import { connect } from 'node:net'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { connect } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -17,7 +17,10 @@ vi.mock('cli-progress', () => ({
   default: {
     MultiBar: class {
       create() {
-        return { increment: vi.fn(), update: vi.fn() }
+        return {
+          increment: vi.fn(),
+          update: vi.fn(),
+        }
       }
 
       log(message: string) {
@@ -28,7 +31,12 @@ vi.mock('cli-progress', () => ({
 }))
 
 vi.mock('consola', () => ({
-  default: { error: vi.fn(), log: vi.fn(), start: vi.fn(), success: vi.fn() },
+  default: {
+    error: vi.fn(),
+    log: vi.fn(),
+    start: vi.fn(),
+    success: vi.fn(),
+  },
 }))
 
 function payload(size: number) {
@@ -98,7 +106,10 @@ describe('serveFile', () => {
     const content = payload(3000)
     const { port } = await serve(content, { chunksize: 512 })
 
-    const [first, second] = await Promise.all([receive(port), receive(port)])
+    const [first, second] = await Promise.all([
+      receive(port),
+      receive(port),
+    ])
 
     expect(first.equals(content)).toBe(true)
     expect(second.equals(content)).toBe(true)

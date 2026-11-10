@@ -1,10 +1,10 @@
-import { createServer } from 'node:net'
 import type { Socket } from 'node:net'
 import fs from 'node:fs'
+import { createServer } from 'node:net'
 import consola from 'consola'
 import { ProgressBars } from './progress-bars.js'
-import { errorMessage, getSocketName, humanFileSize } from './util.js'
 import { SocketChunker } from './socket-chunker.js'
+import { errorMessage, getSocketName, humanFileSize } from './util.js'
 
 // const rl = readline.createInterface({
 //   input: process.stdin,
@@ -60,7 +60,10 @@ export function serveFile(serverPort: number, serverHost: string, fileToServe: s
         file,
         chunkSize,
         delay, //
-        progress: humanSize => progressBars.increment(clientName, { humanSize: humanFileSize(humanSize), status: 'Working' }),
+        progress: humanSize => progressBars.increment(clientName, {
+          humanSize: humanFileSize(humanSize),
+          status: 'Working',
+        }),
         onError: error => progressBars.log(`ERROR: ${clientName} | ${errorMessage(error)}`),
       },
     )

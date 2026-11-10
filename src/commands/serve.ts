@@ -1,5 +1,5 @@
-import consola from 'consola'
 import { defineCommand } from 'citty'
+import consola from 'consola'
 import { serveFile } from '../core/server-file.js'
 import { humanFileSizeToBytes } from '../core/util.js'
 
@@ -32,11 +32,15 @@ export default defineCommand({
     file: {
       type: 'positional',
       description: 'path to file',
+      required: true,
     },
   },
   run({ args }) {
     consola.debug('Serve command running')
     consola.debug('Parsed args:', args)
-    serveFile(Number.parseInt(args.port), args.host, args.file, { chunksize: humanFileSizeToBytes(args.chunksize), delay: Number.parseInt(args.delay) })
+    serveFile(Number.parseInt(args.port), args.host, args.file, {
+      chunksize: humanFileSizeToBytes(args.chunksize),
+      delay: Number.parseInt(args.delay),
+    })
   },
 })

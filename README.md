@@ -55,6 +55,9 @@ filenet serve --chunksize 2M --delay 100 --host 127.0.0.1 --port 6016 /tmp/file.
 npm install filenet
 ```
 
+Requires Node 22.12 or newer. The package is ESM-only; use `import`, not
+`require`.
+
 ```ts
 import { serveFile } from 'filenet'
 

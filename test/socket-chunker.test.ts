@@ -66,7 +66,13 @@ async function chunkerFor(content: Buffer, chunkSize: number, delay = 0) {
     progress: position => progress.push(position),
     onError: error => errors.push(error),
   })
-  return { chunker, errors, file, progress, socket }
+  return {
+    chunker,
+    errors,
+    file,
+    progress,
+    socket,
+  }
 }
 
 beforeEach(async () => {

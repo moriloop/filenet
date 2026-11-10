@@ -24,5 +24,7 @@ export function getSocketName(sock: Socket) {
 
 /** One line description of a value caught in a `catch` block. */
 export function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error)
+  return error instanceof Error
+    ? error.message
+    : String(error)
 }

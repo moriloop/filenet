@@ -12,7 +12,7 @@ no protocol framing: clients connect with `nc` and stream the bytes out.
 ## Commands
 
 Run everything from the repository root. Use pnpm; the lockfile and
-`packageManager` field assume it. Node LTS (20+) is expected.
+`packageManager` field assume it. Node 22.12+ is expected.
 
 | Command | Purpose |
 | --- | --- |
@@ -138,8 +138,6 @@ pnpm exec cspell --no-summary --no-progress <files>
 
 ## Gotchas and known drift
 
-- The CLI version is hardcoded to `0.0.1` in `src/cli.ts` and does not track
-  `package.json`. If you touch it, prefer deriving it from one source.
 - `serveFile` calls `fs.statSync` eagerly, so a missing file throws
   synchronously before the server starts, but nothing checks the file again
   afterwards. Deleting the file mid transfer drops that client's connection and
@@ -152,8 +150,6 @@ pnpm exec cspell --no-summary --no-progress <files>
 - A file whose size is an exact multiple of `chunkSize` costs one extra read
   that returns an empty buffer, and that empty chunk still reports progress.
   `test/socket-chunker.test.ts` pins this behavior.
-- `pnpm-workspace.yaml` lists workspace packages that do not exist. This is a
-  single-package repository.
 
 ## Definition of done
 
