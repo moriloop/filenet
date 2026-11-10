@@ -3,7 +3,7 @@ import type { Socket } from 'node:net'
 import fs from 'node:fs'
 import consola from 'consola'
 import { ProgressBars } from './progress-bars'
-import { getSocketName, humanFileSize } from './util'
+import { errorMessage, getSocketName, humanFileSize } from './util'
 import { SocketChunker } from './socket-chunker'
 
 // const rl = readline.createInterface({
@@ -61,6 +61,7 @@ export function serveFile(serverPort: number, serverHost: string, fileToServe: s
         chunkSize,
         delay, //
         progress: humanSize => progressBars.increment(clientName, { humanSize: humanFileSize(humanSize), status: 'Working' }),
+        onError: error => progressBars.log(`ERROR: ${clientName} | ${errorMessage(error)}`),
       },
     )
     chunker.nextChunk()
@@ -69,15 +70,22 @@ export function serveFile(serverPort: number, serverHost: string, fileToServe: s
     // consola.log(`DATA received by client ${sock.remoteAddress}: ${data}`)
     })
 
+    // A client that aborts the transfer (RST, killed process) makes the socket
+    // emit ECONNRESET or EPIPE. Node rethrows an unhandled 'error' event, which
+    // takes the whole server down, so every socket needs a listener.
+    sock.on('error', (error) => {
+      progressBars.log(`ERROR: ${clientName} | ${errorMessage(error)}`)
+    })
+
     // Add a 'close' event handler to this instance of socket
     sock.on('close', (_hadError) => {
-      const index = sockets.findIndex((o) => {
-        return o.remoteAddress === sock.remoteAddress && o.remotePort === sock.remotePort
-      })
+      const index = sockets.indexOf(sock)
       if (index !== -1)
         sockets.splice(index, 1)
-      progressBars.update(getSocketName(sock), { status: 'Closed' })
-      progressBars.log(`CLOSED: ${sock.remoteAddress} ${sock.remotePort}`)
+      // clientName was captured while the socket was still connected: after
+      // destroy, remoteAddress and remotePort are gone.
+      progressBars.update(clientName, { status: 'Closed' })
+      progressBars.log(`CLOSED: ${clientName}`)
     })
   })
   return server

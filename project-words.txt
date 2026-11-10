@@ -4,8 +4,10 @@ Chunker
 citty
 commitlint
 consola
+ECONNRESET
 filenet
 KMGT
+RST
 typecheck
 cli
 chunksize

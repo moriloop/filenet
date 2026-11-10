@@ -21,3 +21,8 @@ export function humanFileSizeToBytes(fileSizeString: string) {
 export function getSocketName(sock: Socket) {
   return `${sock.remoteAddress}:${sock.remotePort}`
 }
+
+/** One line description of a value caught in a `catch` block. */
+export function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
+}
