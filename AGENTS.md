@@ -20,16 +20,15 @@ Run everything from the repository root. Use pnpm; the lockfile and
 | `pnpm dev` | unbuild stub build for development |
 | `pnpm build` | Production build into `dist/` (ESM + CJS + `.d.ts`) |
 | `pnpm start` | Build, then run the CLI from `dist/` |
-| `pnpm test` | Vitest watch mode |
-| `pnpm exec vitest run` | One-shot test run (use this in automation) |
+| `pnpm test` | One-shot test run |
+| `pnpm test:watch` | Vitest watch mode |
 | `pnpm coverage` | Test coverage |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm lint` | ESLint with `@antfu/eslint-config` |
 | `pnpm release` | release-it; only from `main` |
 
-Before declaring work done: `pnpm lint`, `pnpm typecheck`, and
-`pnpm exec vitest run` must pass. Run `pnpm build` too if exports or build
-inputs changed.
+Before declaring work done: `pnpm lint`, `pnpm typecheck`, and `pnpm test` must
+pass. Run `pnpm build` too if exports or build inputs changed.
 
 Spell checking is not a standalone script. It runs from the Husky hooks; run it
 manually with:
