@@ -13,3 +13,5 @@ typecheck
 cli
 chunksize
 netcat
+mori
+tutamail
