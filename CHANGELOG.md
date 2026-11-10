@@ -3,6 +3,50 @@
 
 All considerable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## v0.2.1
+
+[compare changes](https://github.com/moriloop/filenet/compare/v0.1.3...v0.2.1)
+
+### 🩹 Fixes
+
+- Keep the server running when a client aborts or the file disappears ([b581b77](https://github.com/moriloop/filenet/commit/b581b77))
+- **build:** Fix previous version ([5643c65](https://github.com/moriloop/filenet/commit/5643c65))
+- Fix npm release config ([d5c8960](https://github.com/moriloop/filenet/commit/d5c8960))
+- **release:** Set explicit git tag name ([acf0242](https://github.com/moriloop/filenet/commit/acf0242))
+
+### 💅 Refactors
+
+- Remove the leftover library starter export ([3c1b632](https://github.com/moriloop/filenet/commit/3c1b632))
+
+### 📖 Documentation
+
+- Update usage documentation ([8326ceb](https://github.com/moriloop/filenet/commit/8326ceb))
+- Document error handling and the test layout in AGENTS.md ([ce7d8c0](https://github.com/moriloop/filenet/commit/ce7d8c0))
+- Refocus README on network testing ([28bea29](https://github.com/moriloop/filenet/commit/28bea29))
+
+### 📦 Build
+
+- Allow esbuild to run its build scripts ([89f115d](https://github.com/moriloop/filenet/commit/89f115d))
+- Replace unbuild with tsc and publish ESM only ([1744581](https://github.com/moriloop/filenet/commit/1744581))
+
+### 🏡 Chore
+
+- Point the package metadata at the current repository ([e43aefd](https://github.com/moriloop/filenet/commit/e43aefd))
+- Update author email ([c5711ca](https://github.com/moriloop/filenet/commit/c5711ca))
+- Sanitize build and lint configs ([5a56e73](https://github.com/moriloop/filenet/commit/5a56e73))
+
+### ✅ Tests
+
+- Cover util, socket chunker, server and the serve command ([a8718a2](https://github.com/moriloop/filenet/commit/a8718a2))
+
+### 🤖 CI
+
+- Modernize workflow and run the build ([3893c3f](https://github.com/moriloop/filenet/commit/3893c3f))
+
+### ❤️ Contributors
+
+- Mori ([@moriloop](https://github.com/moriloop))
+
 ## v0.1.3
 
 [compare changes](https://github.com/mohammadGh/filenet/compare/v0.1.2...v0.1.3)
