@@ -46,16 +46,14 @@ function payload(size: number) {
 }
 
 /**
- * Binds a client, sends a trigger datagram, and collects datagrams until the
- * expected count arrives. UDP has no EOF, so the count is the only end signal.
+ * Collects datagrams on a bound client. UDP has no EOF, so the expected count
+ * is the only end signal.
  */
-function receive(port: number, expectedDatagrams: number, trigger = Buffer.from('go')) {
+function collect(client: DatagramSocket, expectedDatagrams: number) {
   return new Promise<Buffer>((resolve, reject) => {
-    const client = createSocket('udp4')
     const chunks: Buffer[] = []
 
     const timer = setTimeout(() => {
-      client.close()
       reject(new Error(`timed out after ${chunks.length}/${expectedDatagrams} datagrams`))
     }, 5000)
 
@@ -63,27 +61,31 @@ function receive(port: number, expectedDatagrams: number, trigger = Buffer.from(
       chunks.push(Buffer.from(message))
       if (chunks.length === expectedDatagrams) {
         clearTimeout(timer)
-        client.close()
         resolve(Buffer.concat(chunks))
       }
     })
 
     client.on('error', (error) => {
       clearTimeout(timer)
-      client.close()
       reject(error)
     })
-
-    client.bind(0, '127.0.0.1', () => {
-      client.send(trigger, port, '127.0.0.1')
-    })
   })
+}
+
+/** Binds a client, sends a trigger datagram, then collects the response. */
+function receive(port: number, expectedDatagrams: number, trigger = Buffer.from('go')) {
+  const client = createSocket('udp4')
+  const received = collect(client, expectedDatagrams)
+  client.bind(0, '127.0.0.1', () => {
+    client.send(trigger, port, '127.0.0.1')
+  })
+  return received.finally(() => client.close())
 }
 
 let dir: string
 let servers: DatagramSocket[]
 
-async function serve(content: Buffer, options: { chunksize?: number, delay?: number } = {}) {
+async function serve(content: Buffer, options: { chunksize?: number, delay?: number, target?: { host: string, port: number } } = {}) {
   const file = join(dir, 'served.bin')
   await writeFile(file, content)
   const server = serveFile(0, '127.0.0.1', file, {
@@ -117,6 +119,24 @@ describe('serveFile over UDP', () => {
     const { port } = await serve(content)
 
     expect((await receive(port, 3, Buffer.from('anything'))).equals(content)).toBe(true)
+  })
+
+  it('streams to a fixed target without a trigger datagram', async () => {
+    const content = payload(2500)
+    const client = createSocket('udp4')
+    await new Promise<void>(resolve => client.bind(0, '127.0.0.1', () => resolve()))
+    const clientPort = (client.address() as AddressInfo).port
+
+    try {
+      const received = collect(client, 3)
+      await serve(content, {
+        target: { host: '127.0.0.1', port: clientPort },
+      })
+      expect((await received).equals(content)).toBe(true)
+    }
+    finally {
+      client.close()
+    }
   })
 
   it('sends exactly ceil(size / chunkSize) datagrams for an exact multiple', async () => {
@@ -153,5 +173,21 @@ describe('serveFile over UDP', () => {
     await writeFile(file, payload(10))
 
     expect(() => serveFile(0, '127.0.0.1', file, { protocol: 'udp', chunksize: 65_508 })).toThrow(RangeError)
+  })
+
+  it('rejects an invalid target port', async () => {
+    const file = join(dir, 'served.bin')
+    await writeFile(file, payload(10))
+
+    expect(() => serveFile(0, '127.0.0.1', file, {
+      protocol: 'udp',
+      target: { host: '127.0.0.1', port: 0 },
+    })).toThrow(RangeError)
+  })
+
+  it('rejects a target for TCP', () => {
+    expect(() => serveFile(0, '127.0.0.1', '/tmp/file', {
+      target: { host: '127.0.0.1', port: 9000 },
+    })).toThrow('udp')
   })
 })

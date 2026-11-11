@@ -41,6 +41,7 @@ The server keeps running until it is stopped.
 | `--port` | `6016` | Port to listen on |
 | `--udp` | `false` | Serve over UDP instead of TCP. Best-effort and lossy |
 | `--host` | `0.0.0.0` (TCP), `127.0.0.1` (UDP) | Address to bind |
+| `--target` | none | UDP only. `host:port` (or `[ipv6]:port`) to stream to immediately, without waiting for the client to send a datagram |
 | `--chunksize` | `1M` (TCP), `1400` (UDP) | Size of each chunk. Accepts bytes or a `K`/`M`/`G` postfix, for example `10K`, `2M`, or `1.5G`. A UDP chunk must fit in one datagram, so it cannot exceed 65507 bytes |
 | `--delay` | `500` (TCP), `0` (UDP) | Delay between chunks, in milliseconds |
 
@@ -56,11 +57,21 @@ filenet serve --chunksize 2M --delay 100 --host 127.0.0.1 --port 6016 /tmp/file.
 filenet serve --udp --chunksize 1400 /tmp/file.mp4
 ```
 
-UDP has no connections, so the client starts the transfer by sending any datagram. The server streams one chunk per datagram to that source address and port, then stops. There is no EOF datagram, no retransmission, and no ordering guarantee, so the receiver has to know how many bytes to expect or use an idle timeout.
+UDP has no connections, so by default the client starts the transfer by sending any datagram. The server streams one chunk per datagram to that source address and port, then stops.
 
 ```bash
 printf 'go' | nc -u -w 1 127.0.0.1 6016 > file.mp4
 ```
+
+To avoid the trigger datagram entirely, pass `--target` with the receiver's address. The server starts streaming as soon as it binds, so the receiver must already be bound when the server starts, or the first datagrams are lost:
+
+```bash
+filenet serve --udp --target 192.168.1.50:9000 --chunksize 2K --delay 300 /tmp/file.mp4
+```
+
+With `--target`, the receiver only has to bind and listen, for example `nc -u -l 9000 > file.mp4`. `--target` requires `--udp`, and the socket family has to match: an IPv4 bind (`--host 0.0.0.0`) cannot send to an IPv6 target. When the receiver is on another machine, bind the server to an interface that can reach it, for example `--host 0.0.0.0`. Incoming datagrams still start additional transfers for their senders.
+
+There is no EOF datagram, no retransmission, and no ordering guarantee, so the receiver has to know how many bytes to expect or use an idle timeout.
 
 Because `--udp` binds `127.0.0.1` by default, pass `--host 0.0.0.0` to make it reachable from other machines. Exposing UDP publicly is risky: one small datagram can make the server stream the whole file to a spoofed address (reflection/amplification). Only do that on a trusted network.
 
@@ -88,4 +99,4 @@ const server = serveFile(6016, '0.0.0.0', '/tmp/file.mp4', {
 server.close()
 ```
 
-The library defaults differ from the CLI: 1 MiB chunks and a 1000 ms delay for TCP, 1400-byte chunks and a 0 ms delay for UDP. `serveFile` returns the underlying `net.Server` for TCP or `dgram.Socket` for UDP; it does not close active client connections for you. UDP has no connections, so a peer starts a transfer by sending any datagram to the bound port.
+The library defaults differ from the CLI: 1 MiB chunks and a 1000 ms delay for TCP, 1400-byte chunks and a 0 ms delay for UDP. `serveFile` returns the underlying `net.Server` for TCP or `dgram.Socket` for UDP; it does not close active client connections for you. UDP has no connections, so a peer starts a transfer by sending any datagram to the bound port, unless you pass `target: { host, port }` with `protocol: 'udp'`, which streams to that peer as soon as the socket is bound.

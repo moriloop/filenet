@@ -72,6 +72,10 @@ pnpm exec cspell --no-summary --no-progress <files>
 - UDP uses one bound `dgram.Socket` for every peer. Any datagram from a new
   `rinfo` starts a `DatagramChunker` for that address and port; datagrams from a
   peer that is already receiving are ignored.
+- UDP can also stream without a trigger datagram: `serveFile` accepts
+  `target: { host, port }`, and `serveFileUdp` starts one chunker for that peer
+  in its `'listening'` handler. The receiver must be bound first. `target` is
+  rejected for TCP and its port is validated.
 - UDP is lossy by design: one chunk per datagram, no EOF datagram, no
   retransmission, and no ordering guarantee. A short or empty read ends the
   transfer. An empty final read, which happens when the file size is an exact

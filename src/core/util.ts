@@ -19,11 +19,45 @@ export function humanFileSizeToBytes(fileSizeString: string) {
   return fileSize * (multiplier ?? 1)
 }
 
+export interface HostPort {
+  host: string
+  port: number
+}
+
+const BRACKETED_HOST_PORT = /^\[([^\]]+)\]:(\d+)$/
+
+/** Parses `host:port` or `[ipv6]:port` into its parts. */
+export function parseHostPort(value: string): HostPort {
+  const trimmed = value.trim()
+  const bracketed = BRACKETED_HOST_PORT.exec(trimmed)
+
+  let host: string
+  let portText: string
+
+  if (bracketed) {
+    host = bracketed[1]
+    portText = bracketed[2]
+  }
+  else {
+    const separator = trimmed.lastIndexOf(':')
+    if (separator <= 0 || trimmed.startsWith('['))
+      throw new Error(`Invalid target "${value}": expected host:port or [ipv6]:port`)
+    host = trimmed.slice(0, separator)
+    portText = trimmed.slice(separator + 1)
+  }
+
+  const port = Number(portText)
+  if (!Number.isInteger(port) || port < 1 || port > 65_535)
+    throw new RangeError(`Invalid port in target "${value}": expected 1-65535`)
+
+  return { host, port }
+}
+
 export function getSocketName(sock: Socket) {
   return `${sock.remoteAddress}:${sock.remotePort}`
 }
 
-export function getPeerName(peer: RemoteInfo) {
+export function getPeerName(peer: Pick<RemoteInfo, 'address' | 'port'>) {
   return `${peer.address}:${peer.port}`
 }
 

@@ -1,5 +1,6 @@
 import type { Socket as DatagramSocket, RemoteInfo } from 'node:dgram'
 import type { Server, Socket } from 'node:net'
+import type { HostPort } from './util.js'
 import { createSocket } from 'node:dgram'
 import fs from 'node:fs'
 import { createServer } from 'node:net'
@@ -23,6 +24,12 @@ export interface ServeFileParams {
   delay?: number
   /** Transport to serve on. Defaults to `tcp`. */
   protocol?: ServeProtocol
+  /**
+   * UDP only. Start sending to this peer as soon as the socket is bound, so the
+   * receiver does not have to send a datagram first. The receiver must be bound
+   * before the server starts, or the first datagrams are lost.
+   */
+  target?: HostPort
 }
 
 /** `net.Server` for TCP, `dgram.Socket` for UDP. */
@@ -30,6 +37,8 @@ export type FileServer = Server | DatagramSocket
 
 export function serveFile(serverPort: number, serverHost: string, fileToServe: string, params?: ServeFileParams): FileServer {
   const protocol = params?.protocol ?? 'tcp'
+  if (params?.target && protocol !== 'udp')
+    throw new Error('target is only supported with the udp protocol')
   return protocol === 'udp'
     ? serveFileUdp(serverPort, serverHost, fileToServe, params)
     : serveFileTcp(serverPort, serverHost, fileToServe, params)
@@ -127,6 +136,10 @@ function serveFileUdp(serverPort: number, serverHost: string, fileToServe: strin
   if (chunkSize > UDP_MAX_PAYLOAD)
     throw new RangeError(`UDP chunk size must not exceed ${UDP_MAX_PAYLOAD} bytes, got ${chunkSize}`)
 
+  const target = params?.target
+  if (target && (!Number.isInteger(target.port) || target.port < 1 || target.port > 65_535))
+    throw new RangeError(`Target port must be an integer between 1 and 65535, got ${target.port}`)
+
   const port = serverPort ?? 7070
   const host = serverHost ?? '127.0.0.1'
   const file = fileToServe ?? '/tmp/file'
@@ -142,17 +155,8 @@ function serveFileUdp(serverPort: number, serverHost: string, fileToServe: strin
   const progressBars = new ProgressBars()
   const activePeers = new Set<string>()
 
-  socket.on('listening', () => {
-    const address = socket.address()
-    consola.start(`UDP File Server is running on ${address.address}:${address.port}`)
-    consola.start(`Chunk Size: ${humanFileSize(chunkSize)} | Delay (between each chunk): ${delay} ms`)
-    consola.success(`File: ${file} | Size: ${humanFileSize(fileSize)} \n`)
-    consola.info('Best-effort mode: send any datagram to start a stream. UDP can lose or reorder packets, so the received file is not guaranteed to be intact.')
-  })
-
-  // Any datagram from a new peer starts one transfer to that peer. Datagrams
-  // from a peer that is already receiving are ignored.
-  socket.on('message', (_message, peer) => {
+  // One transfer per peer. A peer that is already receiving is ignored.
+  const serveToPeer = (peer: Pick<RemoteInfo, 'address' | 'port'>) => {
     const clientName = getPeerName(peer)
     if (activePeers.has(clientName))
       return
@@ -181,6 +185,26 @@ function serveFileUdp(serverPort: number, serverHost: string, fileToServe: strin
       },
     })
     chunker.start()
+  }
+
+  socket.on('listening', () => {
+    const address = socket.address()
+    consola.start(`UDP File Server is running on ${address.address}:${address.port}`)
+    consola.start(`Chunk Size: ${humanFileSize(chunkSize)} | Delay (between each chunk): ${delay} ms`)
+    consola.success(`File: ${file} | Size: ${humanFileSize(fileSize)} \n`)
+    if (target) {
+      const peer = { address: target.host, port: target.port }
+      consola.info(`Streaming to ${getPeerName(peer)} as soon as the socket is bound. Start the receiver first; datagrams sent before it binds are lost.`)
+      serveToPeer(peer)
+    }
+    else {
+      consola.info('Best-effort mode: send any datagram to start a stream. UDP can lose or reorder packets, so the received file is not guaranteed to be intact.')
+    }
+  })
+
+  // Any datagram from a new peer starts one transfer to that peer.
+  socket.on('message', (_message, peer) => {
+    serveToPeer(peer)
   })
 
   // A datagram sent to a port nobody listens on can come back as ICMP port
@@ -194,7 +218,7 @@ function serveFileUdp(serverPort: number, serverHost: string, fileToServe: strin
   return socket
 }
 
-function sendDatagram(socket: DatagramSocket, peer: RemoteInfo, buffer: Uint8Array) {
+function sendDatagram(socket: DatagramSocket, peer: Pick<RemoteInfo, 'address' | 'port'>, buffer: Uint8Array) {
   return new Promise<void>((resolve, reject) => {
     socket.send(buffer, peer.port, peer.address, (error) => {
       if (error)
