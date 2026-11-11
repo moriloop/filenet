@@ -30,7 +30,11 @@ npm install -g filenet
 pnpm install -g filenet
 ```
 
-Or run without installing via `npx filenet ...`.
+Or run it without installing:
+
+```bash
+npx filenet serve /tmp/file.mp4
+```
 
 ### Serve a file
 
@@ -49,7 +53,7 @@ nc 127.0.0.1 6016 > file.mp4
 
 Stop the server with `Ctrl-C`.
 
-### Also: serve over UDP
+### Serve over UDP
 
 ```bash
 filenet serve --udp --chunksize 1400 /tmp/file.mp4
@@ -66,7 +70,7 @@ UDP is lossy by design: one chunk per datagram, no EOF marker, no
 retransmission, no ordering guarantee. The receiver must know how many bytes to
 expect or use an idle timeout.
 
-### Also: send a file to one peer
+### Send a file to one peer
 
 `send` pushes the file to a single `host:port` instead of listening:
 
@@ -170,6 +174,7 @@ const server = serveFile(6016, '0.0.0.0', '/tmp/file.mp4', {
   protocol: 'tcp',
 })
 
+// Close when you are done accepting connections.
 server.close()
 
 await sendFile({ host: '192.168.1.50', port: 9000 }, '/tmp/file.mp4', {
@@ -218,7 +223,7 @@ Import from the source tree in your own scripts or tests:
 ```ts
 import { serveFile } from './src/core/server-file.js'
 
-const server = serveFile(6016, '127.0.0.1', '~/test.txt', {
+const server = serveFile(6016, '127.0.0.1', '/tmp/test.txt', {
   chunksize: 1024,
   delay: 300,
   protocol: 'udp',
