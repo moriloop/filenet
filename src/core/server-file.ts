@@ -1,6 +1,5 @@
 import type { Socket as DatagramSocket, RemoteInfo } from 'node:dgram'
 import type { Server, Socket } from 'node:net'
-import type { HostPort } from './util.js'
 import { createSocket } from 'node:dgram'
 import fs from 'node:fs'
 import { createServer } from 'node:net'
@@ -8,14 +7,13 @@ import consola from 'consola'
 import { DatagramChunker } from './datagram-chunker.js'
 import { ProgressBars } from './progress-bars.js'
 import { SocketChunker } from './socket-chunker.js'
+import { assertUdpChunkSize } from './udp.js'
 import { errorMessage, getPeerName, getSocketName, humanFileSize } from './util.js'
 
 const TCP_DEFAULT_CHUNK_SIZE = 1024 * 1024
 const TCP_DEFAULT_DELAY = 1000
 const UDP_DEFAULT_CHUNK_SIZE = 1400
 const UDP_DEFAULT_DELAY = 0
-/** Largest IPv4 UDP payload: 65535 - 20 (IP header) - 8 (UDP header). */
-const UDP_MAX_PAYLOAD = 65_507
 
 export type ServeProtocol = 'tcp' | 'udp'
 
@@ -24,12 +22,6 @@ export interface ServeFileParams {
   delay?: number
   /** Transport to serve on. Defaults to `tcp`. */
   protocol?: ServeProtocol
-  /**
-   * UDP only. Start sending to this peer as soon as the socket is bound, so the
-   * receiver does not have to send a datagram first. The receiver must be bound
-   * before the server starts, or the first datagrams are lost.
-   */
-  target?: HostPort
 }
 
 /** `net.Server` for TCP, `dgram.Socket` for UDP. */
@@ -37,8 +29,6 @@ export type FileServer = Server | DatagramSocket
 
 export function serveFile(serverPort: number, serverHost: string, fileToServe: string, params?: ServeFileParams): FileServer {
   const protocol = params?.protocol ?? 'tcp'
-  if (params?.target && protocol !== 'udp')
-    throw new Error('target is only supported with the udp protocol')
   return protocol === 'udp'
     ? serveFileUdp(serverPort, serverHost, fileToServe, params)
     : serveFileTcp(serverPort, serverHost, fileToServe, params)
@@ -131,14 +121,7 @@ function serveFileUdp(serverPort: number, serverHost: string, fileToServe: strin
   const chunkSize = params?.chunksize ?? UDP_DEFAULT_CHUNK_SIZE
   const delay = params?.delay ?? UDP_DEFAULT_DELAY
 
-  if (!Number.isInteger(chunkSize) || chunkSize <= 0)
-    throw new RangeError(`UDP chunk size must be a positive integer, got ${chunkSize}`)
-  if (chunkSize > UDP_MAX_PAYLOAD)
-    throw new RangeError(`UDP chunk size must not exceed ${UDP_MAX_PAYLOAD} bytes, got ${chunkSize}`)
-
-  const target = params?.target
-  if (target && (!Number.isInteger(target.port) || target.port < 1 || target.port > 65_535))
-    throw new RangeError(`Target port must be an integer between 1 and 65535, got ${target.port}`)
+  assertUdpChunkSize(chunkSize)
 
   const port = serverPort ?? 7070
   const host = serverHost ?? '127.0.0.1'
@@ -192,14 +175,7 @@ function serveFileUdp(serverPort: number, serverHost: string, fileToServe: strin
     consola.start(`UDP File Server is running on ${address.address}:${address.port}`)
     consola.start(`Chunk Size: ${humanFileSize(chunkSize)} | Delay (between each chunk): ${delay} ms`)
     consola.success(`File: ${file} | Size: ${humanFileSize(fileSize)} \n`)
-    if (target) {
-      const peer = { address: target.host, port: target.port }
-      consola.info(`Streaming to ${getPeerName(peer)} as soon as the socket is bound. Start the receiver first; datagrams sent before it binds are lost.`)
-      serveToPeer(peer)
-    }
-    else {
-      consola.info('Best-effort mode: send any datagram to start a stream. UDP can lose or reorder packets, so the received file is not guaranteed to be intact.')
-    }
+    consola.info('Best-effort mode: send any datagram to start a stream. UDP can lose or reorder packets, so the received file is not guaranteed to be intact.')
   })
 
   // Any datagram from a new peer starts one transfer to that peer.

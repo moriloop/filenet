@@ -28,7 +28,6 @@ describe('serve command', () => {
       chunksize: 1024 * 1024,
       delay: 500,
       protocol: 'tcp',
-      target: undefined,
     })
   })
 
@@ -46,7 +45,6 @@ describe('serve command', () => {
       chunksize: 10 * 1024,
       delay: 100,
       protocol: 'tcp',
-      target: undefined,
     })
   })
 
@@ -64,7 +62,6 @@ describe('serve command', () => {
       chunksize: 1.5 * 1024 * 1024,
       delay: 500,
       protocol: 'tcp',
-      target: undefined,
     })
   })
 
@@ -79,7 +76,6 @@ describe('serve command', () => {
       chunksize: 1400,
       delay: 0,
       protocol: 'udp',
-      target: undefined,
     })
   })
 
@@ -97,51 +93,6 @@ describe('serve command', () => {
       chunksize: 8 * 1024,
       delay: 25,
       protocol: 'udp',
-      target: undefined,
     })
-  })
-
-  it('passes a UDP target through so the client does not send a datagram', () => {
-    run({
-      port: '6016',
-      udp: true,
-      target: '192.168.1.50:9000',
-      file: '/tmp/file.mp4',
-    })
-
-    expect(serveFileMock).toHaveBeenCalledWith(6016, '127.0.0.1', '/tmp/file.mp4', {
-      chunksize: 1400,
-      delay: 0,
-      protocol: 'udp',
-      target: { host: '192.168.1.50', port: 9000 },
-    })
-  })
-
-  it('parses a bracketed IPv6 target', () => {
-    run({
-      port: '6016',
-      udp: true,
-      host: '::1',
-      target: '[::1]:9000',
-      file: '/tmp/file.mp4',
-    })
-
-    expect(serveFileMock).toHaveBeenCalledWith(6016, '::1', '/tmp/file.mp4', {
-      chunksize: 1400,
-      delay: 0,
-      protocol: 'udp',
-      target: { host: '::1', port: 9000 },
-    })
-  })
-
-  it('rejects --target without --udp', () => {
-    expect(() => run({
-      port: '6016',
-      udp: false,
-      target: '127.0.0.1:9000',
-      file: '/tmp/file.mp4',
-    })).toThrow('--target requires --udp')
-
-    expect(serveFileMock).not.toHaveBeenCalled()
   })
 })

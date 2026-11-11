@@ -43,12 +43,17 @@ pnpm exec cspell --no-summary --no-progress <files>
 - `src/index.ts`: public library entry point. Keep the public surface here.
 - `src/cli.ts`: citty root command. Subcommands are registered here.
 - `src/commands/serve.ts`: the `serve` command and its argument parsing.
+- `src/commands/send.ts`: the `send` command and its argument parsing.
 - `src/core/server-file.ts`: TCP/UDP dispatch, listener lifecycle, wiring
   between chunkers and progress bars.
+- `src/core/send-file.ts`: the client side. Connects to one target and pushes
+  the file with the same chunking and delay controls.
 - `src/core/socket-chunker.ts`: per-socket read/write loop, chunk delay, EOF
   and closed-socket handling.
 - `src/core/datagram-chunker.ts`: per-peer UDP send loop, chunk delay, and
   error handling.
+- `src/core/udp.ts`: UDP payload limit and chunk-size validation shared by the
+  server and the client.
 - `src/core/chunk-reader.ts`: shared single-chunk read and EOF detection.
 - `src/core/progress-bars.ts`: `cli-progress` `MultiBar` wrapper, one bar per
   connected client.
@@ -72,20 +77,30 @@ pnpm exec cspell --no-summary --no-progress <files>
 - UDP uses one bound `dgram.Socket` for every peer. Any datagram from a new
   `rinfo` starts a `DatagramChunker` for that address and port; datagrams from a
   peer that is already receiving are ignored.
-- UDP can also stream without a trigger datagram: `serveFile` accepts
-  `target: { host, port }`, and `serveFileUdp` starts one chunker for that peer
-  in its `'listening'` handler. The receiver must be bound first. `target` is
-  rejected for TCP and its port is validated.
+- `sendFile(target, file, params)` is the client side and the only way to
+  stream without a trigger datagram; `serveFile` only listens. TCP connects
+  with `net.createConnection`, writes chunk by chunk, and waits for each write
+  callback so a slow receiver applies backpressure instead of growing the
+  socket buffer; it ends the socket and waits for `'finish'` so the last chunk
+  is flushed. UDP resolves the host once (the family picks `udp4` or `udp6`)
+  and reuses `DatagramChunker`. `sendFile` resolves when the file has been sent
+  and rejects on lookup, connect, write, or read errors.
 - UDP is lossy by design: one chunk per datagram, no EOF datagram, no
   retransmission, and no ordering guarantee. A short or empty read ends the
   transfer. An empty final read, which happens when the file size is an exact
   multiple of the chunk size, is not sent.
 - UDP chunk size must be a positive integer no larger than 65507 bytes. The
-  library and CLI default to 1400 bytes with a 0 ms delay.
+  limit and its validation live in `src/core/udp.ts` and are shared by
+  `serveFile` and `sendFile`. The library and CLI default to 1400 bytes with a
+  0 ms delay.
 - The CLI binds UDP to `127.0.0.1` unless `--host` is given, to avoid turning an
   accidental public listener into a reflection amplifier.
 - Per-client progress totals are `ceil(fileSize / chunkSize)` chunks, keyed by
   `remoteAddress:remotePort` for TCP and `address:port` from `rinfo` for UDP.
+- `ProgressBars.stop()` finalizes the bars: it renders their last state, restores
+  the cursor, and moves to a new line. `sendFile` calls it before printing the
+  success or error line, because cli-progress otherwise finishes its pending
+  redraw on top of that output.
 - `chunkSize` and `delay` have different defaults in the CLI (1M, 500 ms) and in
   the library (1 MiB, 1000 ms). If you change one, decide whether the other
   should follow.
@@ -142,9 +157,16 @@ pnpm exec cspell --no-summary --no-progress <files>
   on port `0`, reads it back over a real TCP socket, and mocks `cli-progress`
   and `consola` to keep the output clean. Prefer this style for end-to-end
   checks.
+- `test/send-file.test.ts` is the client integration test. It starts a real TCP
+  or UDP receiver on port `0`, calls `sendFile`, and compares the bytes it
+  received. It also covers a refused connection, a missing file, and invalid
+  target or chunk-size options.
 - `test/serve-command.test.ts` covers CLI argument parsing with `serveFile`
   mocked. Keep its expectations in sync with the README option table.
-- `test/index.test.ts` checks that the package entry point exports `serveFile`.
+- `test/send-command.test.ts` covers `send` argument parsing with `sendFile`
+  mocked, including the `--tcp`/`--udp` conflict and the error exit path.
+- `test/index.test.ts` checks that the package entry point exports `serveFile`
+  and `sendFile`.
 - CI (`.github/workflows/build-typecheck-test.yml`) runs lint, typecheck,
   tests, and the build on pushes and pull requests to `main`.
 - Do not bind fixed ports in tests without cleanup. Prefer port `0` or close
@@ -171,6 +193,9 @@ pnpm exec cspell --no-summary --no-progress <files>
   synchronously before the server starts, but nothing checks the file again
   afterwards. Deleting the file mid transfer drops that client's connection and
   is reported through `onError`; the server itself stays up.
+- `sendFile` is async, so the same target, chunk-size, and missing-file checks
+  reject its promise instead of throwing synchronously. The CLI relies on that
+  to report one clean line and exit non-zero.
 - `humanFileSizeToBytes` treats a bare number as bytes and only inspects the
   last character for a unit. Keep the CLI help text in sync with that behavior.
 - `humanFileSize(0)` returns `NaN undefined` because `Math.log(0)` is

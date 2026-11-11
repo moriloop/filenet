@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty'
 import consola from 'consola'
 import { serveFile } from '../core/server-file.js'
-import { humanFileSizeToBytes, parseHostPort } from '../core/util.js'
+import { humanFileSizeToBytes } from '../core/util.js'
 
 const TCP_DEFAULT_CHUNK_SIZE = 1024 * 1024
 const TCP_DEFAULT_DELAY = 500
@@ -27,10 +27,6 @@ export default defineCommand({
     host: {
       type: 'string',
       description: 'server host (default: 0.0.0.0 for TCP, 127.0.0.1 for UDP)',
-    },
-    target: {
-      type: 'string',
-      description: 'UDP only: host:port to stream to immediately, without waiting for the client to send a datagram',
     },
     chunksize: {
       type: 'string',
@@ -67,18 +63,11 @@ export default defineCommand({
     const delay = args.delay === undefined
       ? defaultDelay
       : Number.parseInt(args.delay)
-    const target = args.target === undefined
-      ? undefined
-      : parseHostPort(args.target)
-
-    if (target && !args.udp)
-      throw new Error('--target requires --udp')
 
     serveFile(Number.parseInt(args.port), host, args.file, {
       chunksize,
       delay,
       protocol,
-      target,
     })
   },
 })

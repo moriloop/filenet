@@ -37,4 +37,15 @@ export class ProgressBars {
   log(msg: string) {
     this.progressBars.log(msg)
   }
+
+  /**
+   * Renders the bars one last time, restores the cursor, and moves to a new
+   * line. Call this before printing anything else, or the pending redraw lands
+   * on top of the next log line.
+   */
+  stop() {
+    if (!this.progressBars.isActive)
+      return
+    this.progressBars.stop()
+  }
 }

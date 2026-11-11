@@ -19,6 +19,7 @@ const main = defineCommand({
   },
   subCommands: {
     serve: () => import('./commands/serve.js').then(r => r.default),
+    send: () => import('./commands/send.js').then(r => r.default),
   },
 })
 
