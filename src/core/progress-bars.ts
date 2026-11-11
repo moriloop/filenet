@@ -42,10 +42,13 @@ export class ProgressBars {
    * Renders the bars one last time, restores the cursor, and moves to a new
    * line. Call this before printing anything else, or the pending redraw lands
    * on top of the next log line.
+   *
+   * Returns false when nothing was drawn, which is the case outside a TTY.
    */
   stop() {
     if (!this.progressBars.isActive)
-      return
+      return false
     this.progressBars.stop()
+    return true
   }
 }

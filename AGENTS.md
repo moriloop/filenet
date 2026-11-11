@@ -98,9 +98,12 @@ pnpm exec cspell --no-summary --no-progress <files>
 - Per-client progress totals are `ceil(fileSize / chunkSize)` chunks, keyed by
   `remoteAddress:remotePort` for TCP and `address:port` from `rinfo` for UDP.
 - `ProgressBars.stop()` finalizes the bars: it renders their last state, restores
-  the cursor, and moves to a new line. `sendFile` calls it before printing the
-  success or error line, because cli-progress otherwise finishes its pending
-  redraw on top of that output.
+  the cursor, and moves to a new line. It returns false when nothing was drawn,
+  which happens outside a TTY. `sendFile` sets the status to `✔ Done` and stops
+  the bars before printing anything else, because cli-progress otherwise
+  finishes its pending redraw on top of that output. In a TTY the final bar is
+  the only completion message; when no bar was drawn, `sendFile` falls back to a
+  one-line summary.
 - `chunkSize` and `delay` have different defaults in the CLI (1M, 500 ms) and in
   the library (1 MiB, 1000 ms). If you change one, decide whether the other
   should follow.

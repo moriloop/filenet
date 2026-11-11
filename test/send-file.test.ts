@@ -7,14 +7,17 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import consola from 'consola'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sendFile } from '../src/core/send-file'
 
 // Keep the terminal clean: the progress bars and the consola banners are not
 // what these tests are about. The bar updates are recorded so tests can assert
 // on the status the client reports.
-const { barUpdates } = vi.hoisted(() => ({
+const { barUpdates, barState } = vi.hoisted(() => ({
   barUpdates: [] as Record<string, unknown>[],
+  // Pretend stdout is a TTY so bars are "drawn" unless a test says otherwise.
+  barState: { visible: true },
 }))
 
 vi.mock('cli-progress', () => ({
@@ -23,7 +26,9 @@ vi.mock('cli-progress', () => ({
       isActive = false
 
       create() {
-        this.isActive = true
+        // Like cli-progress: outside a TTY the bar is never started, so
+        // nothing is drawn and isActive stays false.
+        this.isActive = barState.visible
         return {
           increment: vi.fn(),
           update: (values: Record<string, unknown>) => {
@@ -128,6 +133,8 @@ beforeEach(async () => {
   servers = []
   sockets = []
   barUpdates.length = 0
+  barState.visible = true
+  vi.mocked(consola.success).mockClear()
 })
 
 afterEach(async () => {
@@ -181,7 +188,20 @@ describe('sendFile', () => {
     await sendFile({ host: '127.0.0.1', port }, file, { chunksize: 512, delay: 0 })
     await received
 
-    expect(barUpdates).toContainEqual(expect.objectContaining({ status: 'Done' }))
+    expect(barUpdates).toContainEqual(expect.objectContaining({ status: '✔ Done' }))
+    // The final bar carries the status and the size, so no summary line.
+    expect(consola.success).not.toHaveBeenCalledWith(expect.stringMatching(/^Sent /))
+  })
+
+  it('prints a one-line summary when no progress bar is drawn', async () => {
+    barState.visible = false
+    const file = await makeFile(payload(500))
+    const { port, received } = await tcpReceiver()
+
+    await sendFile({ host: '127.0.0.1', port }, file, { chunksize: 512, delay: 0 })
+    await received
+
+    expect(consola.success).toHaveBeenCalledWith(`Sent 500.00 B to 127.0.0.1:${port}`)
   })
 
   it('rejects when the TCP connection is refused', async () => {

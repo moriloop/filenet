@@ -72,9 +72,10 @@ export async function sendFile(target: HostPort, fileToSend: string, params?: Se
     throw error
   }
 
-  progressBars.update(peerName, { status: 'Done' })
-  progressBars.stop()
-  consola.success(`Sent ${humanFileSize(fileSize)} to ${peerName}`)
+  progressBars.update(peerName, { status: '✔ Done' })
+  // Outside a TTY no bar is drawn, so the final line is the only confirmation.
+  if (!progressBars.stop())
+    consola.success(`Sent ${humanFileSize(fileSize)} to ${peerName}`)
 }
 
 function assertTarget(target: HostPort) {
