@@ -3,6 +3,29 @@
 
 All considerable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## v0.3.0
+
+[compare changes](https://github.com/moriloop/filenet/compare/v0.2.1...v0.3.0)
+
+### 🚀 Enhancements
+
+- **udp:** Add lossy UDP file serving ([ae66aef](https://github.com/moriloop/filenet/commit/ae66aef))
+- **udp:** Support fixed-target streaming ([94d8605](https://github.com/moriloop/filenet/commit/94d8605))
+- **cli:** Add push-based file sending ([575fa03](https://github.com/moriloop/filenet/commit/575fa03))
+
+### 🩹 Fixes
+
+- **send:** Show completion only in the final progress bar ([3c83e4d](https://github.com/moriloop/filenet/commit/3c83e4d))
+
+### 📖 Documentation
+
+- Refine README as the main project document ([a1ea57f](https://github.com/moriloop/filenet/commit/a1ea57f))
+- Polish README examples ([486f815](https://github.com/moriloop/filenet/commit/486f815))
+
+### ❤️ Contributors
+
+- Mori ([@moriloop](https://github.com/moriloop))
+
 ## v0.2.1
 
 [compare changes](https://github.com/moriloop/filenet/compare/v0.1.3...v0.2.1)

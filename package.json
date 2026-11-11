@@ -1,7 +1,7 @@
 {
   "name": "filenet",
   "type": "module",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "packageManager": "pnpm@12.14.0",
   "description": "Serve a single file over raw TCP or UDP in chunks to many clients at once",
   "author": "Mori <itsmori@tutamail.com>",
