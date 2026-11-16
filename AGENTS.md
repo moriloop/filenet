@@ -104,9 +104,9 @@ pnpm exec cspell --no-summary --no-progress <files>
   finishes its pending redraw on top of that output. In a TTY the final bar is
   the only completion message; when no bar was drawn, `sendFile` falls back to a
   one-line summary.
-- `chunkSize` and `delay` have different defaults in the CLI (1M, 500 ms) and in
-  the library (1 MiB, 1000 ms). If you change one, decide whether the other
-  should follow.
+- `chunkSize` and `delay` have the same defaults in the CLI and in the library
+  (1 MiB and 500 ms for TCP, 1400 bytes and 0 ms for UDP). The constants are
+  duplicated in `src/commands/` and `src/core/`, so change them together.
 - Every accepted socket needs an `'error'` listener. Node rethrows an unhandled
   `'error'` event, so a single client that aborts with `ECONNRESET` would kill
   the process. The socket is destroyed right after the error, which fires

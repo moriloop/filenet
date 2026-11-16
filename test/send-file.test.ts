@@ -135,6 +135,7 @@ beforeEach(async () => {
   barUpdates.length = 0
   barState.visible = true
   vi.mocked(consola.success).mockClear()
+  vi.mocked(consola.start).mockClear()
 })
 
 afterEach(async () => {
@@ -202,6 +203,14 @@ describe('sendFile', () => {
     await received
 
     expect(consola.success).toHaveBeenCalledWith(`Sent 500.00 B to 127.0.0.1:${port}`)
+  })
+
+  it('uses the CLI default TCP delay of 500 ms', async () => {
+    const file = await makeFile(payload(10))
+    const port = await closedPort()
+
+    await expect(sendFile({ host: '127.0.0.1', port }, file)).rejects.toThrow()
+    expect(consola.start).toHaveBeenCalledWith(expect.stringContaining('Delay (between each chunk): 500 ms'))
   })
 
   it('rejects when the TCP connection is refused', async () => {

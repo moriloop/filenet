@@ -5,6 +5,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { connect } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import consola from 'consola'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { serveFile } from '../src/core/server-file'
 
@@ -80,6 +81,7 @@ beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'filenet-'))
   servers = []
   progressLog.length = 0
+  vi.mocked(consola.start).mockClear()
 })
 
 afterEach(async () => {
@@ -120,6 +122,12 @@ describe('serveFile', () => {
     const { port } = await serve(content, { chunksize: 50, delay: 5 })
 
     expect((await receive(port)).equals(content)).toBe(true)
+  })
+
+  it('uses the CLI default TCP delay of 500 ms', async () => {
+    await serve(payload(10), { delay: undefined })
+
+    expect(consola.start).toHaveBeenCalledWith(expect.stringContaining('Delay (between each chunk): 500 ms'))
   })
 
   it('throws when the file does not exist', async () => {

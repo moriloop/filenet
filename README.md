@@ -184,11 +184,11 @@ await sendFile({ host: '192.168.1.50', port: 9000 }, '/tmp/file.mp4', {
 })
 ```
 
-Library defaults differ from the CLI: 1 MiB chunks and a 1000 ms delay for TCP,
-1400-byte chunks and a 0 ms delay for UDP. `serveFile` returns the underlying
-`net.Server` for TCP or `dgram.Socket` for UDP; it does not close active client
-connections. `sendFile` resolves when the file has been sent and rejects on
-lookup, connect, write, or read errors.
+The library uses the same defaults as the CLI: 1 MiB chunks and a 500 ms delay
+for TCP, 1400-byte chunks and a 0 ms delay for UDP. `serveFile` returns the
+underlying `net.Server` for TCP or `dgram.Socket` for UDP; it does not close
+active client connections. `sendFile` resolves when the file has been sent and
+rejects on lookup, connect, write, or read errors.
 
 ## Developing
 
