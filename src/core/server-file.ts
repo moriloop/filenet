@@ -11,7 +11,7 @@ import { assertUdpChunkSize } from './udp.js'
 import { errorMessage, getPeerName, getSocketName, humanFileSize } from './util.js'
 
 const TCP_DEFAULT_CHUNK_SIZE = 1024 * 1024
-const TCP_DEFAULT_DELAY = 1000
+const TCP_DEFAULT_DELAY = 500
 const UDP_DEFAULT_CHUNK_SIZE = 1400
 const UDP_DEFAULT_DELAY = 0
 

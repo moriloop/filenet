@@ -15,7 +15,7 @@ import { assertUdpChunkSize } from './udp.js'
 import { getPeerName, humanFileSize } from './util.js'
 
 const TCP_DEFAULT_CHUNK_SIZE = 1024 * 1024
-const TCP_DEFAULT_DELAY = 1000
+const TCP_DEFAULT_DELAY = 500
 const UDP_DEFAULT_CHUNK_SIZE = 1400
 const UDP_DEFAULT_DELAY = 0
 const CONNECTION_CLOSED = 'the connection closed before the whole file was sent'
